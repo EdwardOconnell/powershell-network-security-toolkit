@@ -1,0 +1,17 @@
+# Output these scripts can generate. Never commit it: it contains
+# IP addresses, MAC addresses, device names, and network names.
+*.csv
+*.json
+Check_*.txt
+Snapshot_*.json
+RouterFirewall_*.txt
+SpeedTests.csv
+PktMon.etl
+PktMon.txt
+*.log
+
+# OS / editor clutter
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
