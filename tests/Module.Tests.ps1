@@ -4,7 +4,7 @@ Describe 'NetSecToolkit' {
         Import-Module $script:ModulePath -Force
         $script:Expected = @(
             'Find-NetworkDevice', 'Get-FirewallAudit', 'Get-NetAdapterHealth',
-            'Invoke-DailySecurityCheck', 'Test-NetworkSpeed', 'Test-RouterExposure'
+            'Invoke-DailySecurityCheck', 'Set-FirewallBaseline', 'Test-NetworkSpeed', 'Test-RouterExposure'
         )
     }
 
@@ -22,6 +22,17 @@ Describe 'NetSecToolkit' {
 
         It 'does not export private helpers' {
             Get-Command -Module NetSecToolkit -Name 'ConvertTo-UInt32' -ErrorAction SilentlyContinue | Should -BeNullOrEmpty
+        }
+
+        It 'supports -WhatIf and -Confirm on the command that changes settings' {
+            $cmd = Get-Command Set-FirewallBaseline
+            $cmd.Parameters.ContainsKey('WhatIf')  | Should -BeTrue
+            $cmd.Parameters.ContainsKey('Confirm') | Should -BeTrue
+        }
+
+        It 'only lets Set- commands change settings' {
+            $changing = @(Get-Command -Module NetSecToolkit | Where-Object { $_.Parameters.ContainsKey('WhatIf') }).Name
+            $changing -join ',' | Should -Be 'Set-FirewallBaseline'
         }
 
         It 'has a synopsis and an example for every public command' {

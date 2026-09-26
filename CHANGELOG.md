@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- New `Set-FirewallBaseline` command: applies the fixes `Get-FirewallAudit` recommends
+  (logging of blocked connections for every profile, larger log size, Remote Assistance rules disabled).
+  Changes only non-compliant settings and supports `-WhatIf` and `-Confirm`.
+- `Get-FirewallAudit` now points to `Set-FirewallBaseline` when it finds those issues.
+- Tests confirm `Set-FirewallBaseline` is the only command that can change settings.
+
 ## 1.0.0
 
 Turned the six standalone scripts into the `NetSecToolkit` module.

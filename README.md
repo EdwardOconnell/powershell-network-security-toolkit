@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/EdwardOconnell/powershell-network-security-toolkit/actions/workflows/ci.yml/badge.svg)
 
-A PowerShell 7 module for auditing a Windows PC and the network it's connected to: firewall configuration, network adapters, devices on the local network, router exposure, and connection speed. Every command is **read-only**. None of them changes a setting.
+A PowerShell 7 module for auditing a Windows PC and the network it's connected to: firewall configuration, network adapters, devices on the local network, router exposure, and connection speed. Every audit command is **read-only**. The one command that changes settings, `Set-FirewallBaseline`, applies the audit's recommended firewall fixes and supports `-WhatIf` to preview first.
 
 Built and tested on real home and small-office networks (ASUS routers, mixed Wi-Fi 5/6/7 clients, Windows 11).
 
@@ -12,6 +12,7 @@ Built and tested on real home and small-office networks (ASUS routers, mixed Wi-
 |---|---|---|
 | `Invoke-DailySecurityCheck` | All-in-one daily check: adapters, firewall, firewall log, network devices, printers, USB devices. Saves a report and flags **new devices and USB drives** since the last run. | Yes |
 | `Get-FirewallAudit` | Audits Windows Defender Firewall: profiles, default actions, logging, inbound rules exposing risky ports (RDP, SMB, WinRM, etc.), and allowed programs in user-writable folders. | Yes |
+| `Set-FirewallBaseline` | Applies the fixes `Get-FirewallAudit` recommends: turns on logging of blocked connections for every profile and disables the Remote Assistance rules. Changes only what isn't already compliant. Supports `-WhatIf` and `-Confirm`. | Yes |
 | `Get-NetAdapterHealth` | Checks every adapter: link state, IP, APIPA detection, gateway reachability, driver health, packet errors, internet and DNS. | Yes |
 | `Find-NetworkDevice` | Lists devices on the local subnet using a parallel ping sweep plus the ARP table, with hostnames and randomized-MAC detection. `-Passive` sends no traffic. | No |
 | `Test-RouterExposure` | Checks which services the router exposes on the LAN, shows your public IP for an outside test, and can dump the router's iptables rules over SSH. | No |
@@ -38,6 +39,8 @@ To load it automatically in every session, copy the `NetSecToolkit` folder to `$
 Invoke-DailySecurityCheck                      # run in an elevated window
 Invoke-DailySecurityCheck -ActiveScan -LogHours 72
 Get-FirewallAudit -ExportPath C:\fw-rules.csv
+Set-FirewallBaseline -WhatIf                   # preview the firewall fixes
+Set-FirewallBaseline                           # apply them, then rerun Get-FirewallAudit
 Find-NetworkDevice -Passive
 Test-RouterExposure -Router 192.168.1.1
 Test-NetworkSpeed -Seconds 15

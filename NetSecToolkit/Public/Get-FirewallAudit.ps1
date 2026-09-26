@@ -92,8 +92,13 @@ function Get-FirewallAudit {
     }
 
     Write-Section 'Summary'
-    if ($warnings.Count) { $warnings | ForEach-Object { Write-Host "[!] $_" -ForegroundColor Red } }
-    else                 { Write-Host 'No issues found.' -ForegroundColor Green }
+    if ($warnings.Count) {
+        $warnings | ForEach-Object { Write-Host "[!] $_" -ForegroundColor Red }
+        if ($warnings -match 'not logging|Remote Assistance') {
+            Write-Host "`nTo fix logging and Remote Assistance: Set-FirewallBaseline -WhatIf (preview), then Set-FirewallBaseline." -ForegroundColor Yellow
+        }
+    }
+    else { Write-Host 'No issues found.' -ForegroundColor Green }
 
     if ($PassThru) {
         [pscustomobject]@{ Profiles = $profiles; InboundRules = $ruleInfo; Warnings = $warnings.ToArray() }
