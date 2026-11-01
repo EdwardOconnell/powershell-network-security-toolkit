@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/eds-logo.png" alt="Edward O'Connell, Cyber Security Professional" width="560">
+</p>
+
 # NetSecToolkit
 
 ![CI](https://github.com/EdwardOconnell/powershell-network-security-toolkit/actions/workflows/ci.yml/badge.svg)
@@ -100,3 +104,7 @@ Parameters are the same, and reports keep saving to the same folder, so existing
 ## License
 
 [MIT](LICENSE)
+
+<p align="center">
+  <img src="assets/footer-logo.png" alt="Edward O'Connell EO shield logo" width="180">
+</p>
