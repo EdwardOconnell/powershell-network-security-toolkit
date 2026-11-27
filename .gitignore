@@ -3,6 +3,7 @@
 *.csv
 *.json
 Check_*.txt
+Report_*.html
 Snapshot_*.json
 RouterFirewall_*.txt
 SpeedTests.csv

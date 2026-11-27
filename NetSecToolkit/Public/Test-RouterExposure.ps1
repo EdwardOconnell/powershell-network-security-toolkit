@@ -1,8 +1,8 @@
 function Test-RouterExposure {
     <#
     .SYNOPSIS
-        Checks which services a router exposes on the LAN, shows the public IP for an
-        outside test, and can dump the router's firewall rules over SSH.
+        Checks which services a router exposes on the LAN and whether it answers UPnP,
+        shows the public IP for an outside test, and can dump the router's firewall rules over SSH.
     .DESCRIPTION
         Read-only. Testing your own public IP from inside the network isn't reliable (the
         router loops it back), so use an outside scanner such as GRC ShieldsUP for the WAN side.
@@ -10,6 +10,10 @@ function Test-RouterExposure {
         Router address. Default: the default gateway of the active connection.
     .PARAMETER Ssh
         Also dump iptables rules over SSH. SSH must be enabled on the router (LAN only).
+    .PARAMETER NoUpnp
+        Skip the UPnP (SSDP) discovery check.
+    .PARAMETER NoPublicIp
+        Don't look up the public IP (the lookup asks api.ipify.org).
     .PARAMETER PassThru
         Also return the port results as objects.
     .EXAMPLE
@@ -24,6 +28,8 @@ function Test-RouterExposure {
         [string]$SshUser = 'admin',
         [ValidateRange(1, 65535)][int]$SshPort = 22,
         [ValidateRange(100, 10000)][int]$TimeoutMs = 800,
+        [switch]$NoUpnp,
+        [switch]$NoPublicIp,
         [switch]$PassThru
     )
 
@@ -52,6 +58,7 @@ function Test-RouterExposure {
         @{ Port = 1723; Service = 'PPTP VPN';          Risk = 'High' }
         @{ Port = 3000; Service = 'Web service';       Risk = 'Review' }
         @{ Port = 5000; Service = 'UPnP/web service';  Risk = 'Review' }
+        @{ Port = 7547; Service = 'TR-069 remote mgmt'; Risk = 'High' }
         @{ Port = 8080; Service = 'Alt HTTP';          Risk = 'Review' }
         @{ Port = 8443; Service = 'Web admin (HTTPS)'; Risk = 'Expected' }
         @{ Port = 9100; Service = 'Raw printing';      Risk = 'Review' }
@@ -72,15 +79,20 @@ function Test-RouterExposure {
     $results | Select-Object Port, Service, Open,
         @{ n = 'Note'; e = { Get-ServiceRiskNote -Open $_.Open -Risk $_.Risk } } | Show-Table
 
-    $high = @($results | Where-Object { $_.Open -and $_.Risk -eq 'High' })
-    if ($high.Count) { Write-Host "[!] Risky services open: $($high.Service -join ', ')" -ForegroundColor Red }
-    if (($results | Where-Object Port -eq 80).Open -and -not ($results | Where-Object Port -eq 8443).Open) {
-        Write-Host '[!] Admin page is HTTP only. Enable HTTPS under Administration > System.' -ForegroundColor Yellow
+    $upnp = $null
+    if (-not $NoUpnp) {
+        Write-Host 'Checking for UPnP (SSDP)...' -ForegroundColor Cyan
+        $upnp = Find-UpnpGateway -Router $Router
     }
+    Write-Section 'Findings'
+    $findings = @(Get-RouterFinding -Result $results -Upnp $upnp -UpnpChecked:(-not $NoUpnp))
+    Save-RunFinding -Name 'Test-RouterExposure' -Finding $findings
 
     Write-Section 'Public IP'
-    $publicIp = try { Invoke-RestMethod -Uri 'https://api.ipify.org' -TimeoutSec 5 } catch { $null }
-    if ($publicIp) {
+    $publicIp = if ($NoPublicIp) { $null } else { try { Invoke-RestMethod -Uri 'https://api.ipify.org' -TimeoutSec 5 } catch { $null } }
+    if ($NoPublicIp) {
+        Write-Host '  Skipped (-NoPublicIp).'
+    } elseif ($publicIp) {
         Write-Host "  Your public IP: $publicIp"
         Write-Host "  Testing it from inside your own network isn't reliable (the router loops it back)."
         Write-Host '  For the outside view, run GRC ShieldsUP (grc.com/shieldsup) or scan from a phone on cellular data.'

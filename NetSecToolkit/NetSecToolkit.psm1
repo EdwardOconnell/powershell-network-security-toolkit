@@ -7,4 +7,7 @@ foreach ($file in @($private + $public)) {
     catch { throw "Failed to load $($file.Name): $_" }
 }
 
-Export-ModuleMember -Function $public.BaseName
+# nsai = Invoke-NetSecAssistant
+Set-Alias -Name nsai -Value Invoke-NetSecAssistant
+
+Export-ModuleMember -Function $public.BaseName -Alias nsai

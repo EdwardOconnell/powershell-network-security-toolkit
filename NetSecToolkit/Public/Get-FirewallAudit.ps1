@@ -8,7 +8,7 @@ function Get-FirewallAudit {
     .PARAMETER ExportPath
         Save every enabled inbound allow rule to this CSV file.
     .PARAMETER PassThru
-        Also return the results (rules and warnings) as an object.
+        Also return the results (rules, warnings and findings) as an object.
     .EXAMPLE
         Get-FirewallAudit
     .EXAMPLE
@@ -100,7 +100,21 @@ function Get-FirewallAudit {
     }
     else { Write-Host 'No issues found.' -ForegroundColor Green }
 
+    # The same results as findings, for Invoke-NetSecAssistant and the HTML report.
+    $findings = @(foreach ($w in $warnings) {
+        $level = if ($w -match 'mpssvc|DISABLED|ALLOWS inbound') { 'Risk' } else { 'Warn' }
+        $fix = if ($w -match 'not logging') { 'Set-FirewallBaseline' }
+               elseif ($w -match 'mpssvc|DISABLED|ALLOWS inbound') { $script:HardeningFix }
+               elseif ($w -match 'to ANY remote address') { 'wf.msc > Inbound Rules: limit the rule to "Local subnet" under Scope, or disable it' }
+               else { 'wf.msc > Inbound Rules: disable the rules for programs you do not recognize' }
+        New-Finding -Area Firewall -Level $level -Message $w -Fix $fix -Quiet
+    })
+    if (-not $findings.Count) {
+        $findings = @(New-Finding -Area Firewall -Level OK -Message "Firewall audit: no issues in the profiles or the $($ruleInfo.Count) inbound allow rules." -Quiet)
+    }
+    Save-RunFinding -Name 'Get-FirewallAudit' -Finding $findings
+
     if ($PassThru) {
-        [pscustomobject]@{ Profiles = $profiles; InboundRules = $ruleInfo; Warnings = $warnings.ToArray() }
+        [pscustomobject]@{ Profiles = $profiles; InboundRules = $ruleInfo; Warnings = $warnings.ToArray(); Findings = $findings }
     }
 }

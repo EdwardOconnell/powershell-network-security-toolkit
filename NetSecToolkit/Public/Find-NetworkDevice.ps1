@@ -121,5 +121,10 @@ function Find-NetworkDevice {
         Write-Host 'Only this PC and the gateway are visible. The network likely uses client isolation.' -ForegroundColor Yellow
     }
 
+    $others = @($devices | Where-Object { $_.Role -eq '' })
+    $random = @($others | Where-Object RandomMAC).Count
+    Save-RunFinding -Name 'Find-NetworkDevice' -Finding (New-Finding -Area Devices -Level Info -Quiet -Message (
+        "$($devices.Count) device(s) on this subnet: this PC, the gateway and $($others.Count) other(s), $random with a randomized (privacy) MAC address."))
+
     if ($PassThru) { $devices }
 }
