@@ -87,7 +87,7 @@ function Get-FirewallAudit {
     }
 
     if ($ExportPath) {
-        $ruleInfo | Export-Csv -Path $ExportPath -NoTypeInformation
+        $ruleInfo | Export-Csv -Path $ExportPath
         Write-Host "  Full rule list exported to $ExportPath"
     }
 

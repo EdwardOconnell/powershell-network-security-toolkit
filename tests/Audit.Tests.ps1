@@ -192,7 +192,16 @@ Describe 'Audit helpers (1.2.0)' {
                 $late.Days | Should -Be 200
             }
         }
-        It 'reports an unknown date as information, not as a problem' {
+        It 'treats an install date a day ahead of local time as today' {
+            InModuleScope NetSecToolkit {
+                $now = [datetime]'2026-11-26 23:43'
+                $r = Get-UpdateAgeRating -LastUpdate ([datetime]'2026-11-27') -Now $now
+                $r.Days | Should -Be 0
+                $r.Level | Should -Be 'OK'
+                $r.Text | Should -Match '2026-11-26'
+            }
+        }
+                It 'reports an unknown date as information, not as a problem' {
             InModuleScope NetSecToolkit {
                 $r = Get-UpdateAgeRating -LastUpdate $null
                 $r.Level | Should -Be 'Info'

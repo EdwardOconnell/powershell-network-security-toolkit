@@ -85,12 +85,23 @@ function Get-AssistantFixPlan {
     $steps = [System.Collections.Generic.List[string]]::new()
     $seen = @{}
     $addDistinct = {
+        # One step per distinct fix. Findings that share a fix are named under the first one.
         param($items)
-        foreach ($f in $items) {
+        $pending = @($items | Where-Object { -not "$($_.Fix)" -or -not $seen.ContainsKey("$($_.Fix)") })
+        foreach ($f in $pending) {
             $key = "$($f.Fix)"
             if ($key -and $seen.ContainsKey($key)) { continue }
-            if ($key) { $seen[$key] = $true }
-            $steps.Add((Format-PlanStep $f))
+            $text = Format-PlanStep $f
+            if ($key) {
+                $seen[$key] = $true
+                $same = @($pending | Where-Object { "$($_.Fix)" -eq $key -and -not [object]::ReferenceEquals($_, $f) })
+                if ($same.Count) {
+                    $shown = @($same | Select-Object -First 3 | ForEach-Object { "$($_.Message)".TrimEnd('.') }) -join '; '
+                    if ($same.Count -gt 3) { $shown += " and $($same.Count - 3) more" }
+                    $text += "`n     Same fix for: $shown."
+                }
+            }
+            $steps.Add($text)
         }
     }
     & $addDistinct @($rest | Where-Object Level -eq 'Risk')

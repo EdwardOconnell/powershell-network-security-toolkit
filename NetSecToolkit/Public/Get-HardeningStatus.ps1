@@ -99,9 +99,13 @@ function Get-HardeningStatus {
     } elseif (-not $nbOn.Count) {
         Add-Finding $findings NetBIOS OK "NetBIOS over TCP/IP is off on all $($ifaces.Count) network interface(s)."
     } else {
-        $shown = @($nbOn | Select-Object -First 4 | ForEach-Object Description) -join ', '
-        if ($nbOn.Count -gt 4) { $shown += " and $($nbOn.Count - 4) more" }
-        Add-Finding $findings NetBIOS Warn "NetBIOS over TCP/IP is not off on $($nbOn.Count) of $($ifaces.Count) interface(s): $shown" $fix
+        # Name the adapters that still exist first; leftovers of removed adapters are only counted.
+        $live  = @($nbOn | Where-Object { $_.Description -notlike 'removed adapter*' })
+        $gone  = $nbOn.Count - $live.Count
+        $parts = @($live | Select-Object -First 4 | ForEach-Object Description)
+        if ($live.Count -gt 4) { $parts += "$($live.Count - 4) more" }
+        if ($gone) { $parts += "$gone left over from removed adapters" }
+        Add-Finding $findings NetBIOS Warn "NetBIOS over TCP/IP is not off on $($nbOn.Count) of $($ifaces.Count) interface(s): $($parts -join ', ')." $fix
     }
 
     $guest = Get-GuestAccount

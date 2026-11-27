@@ -233,8 +233,9 @@ function Get-UpdateAgeRating {
     if ($null -eq $LastUpdate) {
         return [pscustomobject]@{ Days = $null; Level = 'Info'; Text = 'Could not read when Windows was last updated.' }
     }
+    # Windows can report the install date a day ahead of local time; treat that as today.
+    if ($LastUpdate -gt $Now) { $LastUpdate = $Now }
     $days = [int][math]::Floor(($Now - $LastUpdate).TotalDays)
-    if ($days -lt 0) { $days = 0 }
     $level = if ($days -le 45) { 'OK' } elseif ($days -le 120) { 'Warn' } else { 'Risk' }
     [pscustomobject]@{
         Days  = $days

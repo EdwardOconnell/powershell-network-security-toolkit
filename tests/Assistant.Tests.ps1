@@ -50,6 +50,10 @@ Describe 'Assistant and findings (1.2.0)' {
                 $html | Should -Match '&lt;script&gt;alert\(1\)&lt;/script&gt;'
                 $html | Should -Match '1 risk\(s\), 1 warning\(s\)</b>, 3 finding\(s\)'
                 $html | Should -Match 'Fix: <code>run that</code>'
+                Export-FindingHtml -Finding $findings -Path $path -Title 'T' -Plan "1. [Warn] a`n     Fix: do x`n     Same fix for: b; c."
+                $html2 = Get-Content -LiteralPath $path -Raw
+                Remove-Item -LiteralPath $path -ErrorAction SilentlyContinue
+                $html2 | Should -Match 'Fix: <code>do x</code><br>Same fix for: b; c\.'
                 $html.IndexOf('class="risk"') | Should -BeLessThan $html.IndexOf('class="warn"')
                 $html.IndexOf('class="warn"') | Should -BeLessThan $html.IndexOf('class="ok"')
             }
@@ -146,7 +150,10 @@ Describe 'Assistant and findings (1.2.0)' {
                     New-Finding -Area Updates -Level Risk -Message 'No update in 200 days.' -Fix 'Check for updates' -Quiet
                     New-Finding -Area Threats -Level Risk -Message 'Unpatched Windows flaws: EXPOSED.' -Fix 'Check for updates' -Quiet
                 )
-                @(Get-AssistantFixPlan -Finding $findings).Count | Should -Be 2   # one fix + the re-check line
+                $plan = @(Get-AssistantFixPlan -Finding $findings)
+                $plan.Count | Should -Be 2   # one fix + the re-check line
+                # The second finding is not dropped: it is named under the first.
+                $plan[0] | Should -Match 'Same fix for: Unpatched Windows flaws: EXPOSED\.'
             }
         }
         It 'numbers issues with risks first, in the order found' {

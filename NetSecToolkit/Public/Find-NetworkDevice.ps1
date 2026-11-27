@@ -114,7 +114,7 @@ function Find-NetworkDevice {
     $devices | Show-Table
 
     if ($ExportPath) {
-        $devices | Export-Csv -Path $ExportPath -NoTypeInformation
+        $devices | Export-Csv -Path $ExportPath
         Write-Host "Exported to $ExportPath"
     }
     if (-not @($devices | Where-Object { $_.Role -eq '' }).Count) {

@@ -174,9 +174,13 @@ function Export-FindingHtml {
     if (@($Plan).Count) {
         [void]$sb.Append('<h2>What to fix first</h2><ol>')
         foreach ($step in @($Plan)) {
-            $parts = ("$step" -replace '^\d+\.\s*', '') -split "`n\s*Fix:\s*", 2
+            $also = ''
+            $body = "$step" -replace '^\d+\.\s*', ''
+            if ($body -match "(?s)^(.*)`n\s*(Same fix for: .*)$") { $body = $Matches[1]; $also = $Matches[2] }
+            $parts = $body -split "`n\s*Fix:\s*", 2
             $item = ConvertTo-HtmlText $parts[0]
             if ($parts.Count -gt 1) { $item += '<br>Fix: <code>' + (ConvertTo-HtmlText $parts[1]) + '</code>' }
+            if ($also) { $item += '<br>' + (ConvertTo-HtmlText $also) }
             [void]$sb.Append('<li>' + $item + '</li>')
         }
         [void]$sb.Append('</ol>')

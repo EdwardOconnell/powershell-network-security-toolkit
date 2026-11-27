@@ -50,7 +50,7 @@ function Get-AccountAudit {
         if (-not $r.Enabled) { continue }
         # Guest never requires a password; Get-HardeningStatus covers it.
         if (-not $r.PasswordRequired -and $r.BuiltIn -ne 'Guest') {
-            Add-Finding $findings Accounts Warn "`"$($r.Name)`" is allowed a blank password (PasswordRequired = False)." "net user `"$($r.Name)`" /passwordreq:yes   (and give it a password)"
+            Add-Finding $findings Accounts Warn "`"$($r.Name)`" is allowed to have a blank password (PasswordRequired = False). It may still have one; this only closes the option." "net user `"$($r.Name)`" /passwordreq:yes"
         }
         if ($r.BuiltIn -eq 'Administrator') {
             Add-Finding $findings Accounts Warn "The built-in Administrator account (`"$($r.Name)`") is enabled. It is the first account attackers try." "Use your own administrator account, then: net user `"$($r.Name)`" /active:no"
