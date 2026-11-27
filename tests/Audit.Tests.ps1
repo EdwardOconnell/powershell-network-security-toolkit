@@ -210,6 +210,48 @@ Describe 'Audit helpers (1.2.0)' {
         }
     }
 
+    Context 'Windows version and build' {
+        It 'formats the edition, version and build' {
+            InModuleScope NetSecToolkit {
+                Format-WindowsBuild -Caption 'Microsoft Windows 11 Pro' -DisplayVersion '25H2' -Build '26200' -Revision '7171' |
+                    Should -Be 'Microsoft Windows 11 Pro, version 25H2, build 26200.7171'
+                Format-WindowsBuild -Caption '' -DisplayVersion '' -Build '19045' -Revision '' | Should -Be 'Windows, build 19045'
+            }
+        }
+        It 'says a serviced Windows 11 version is OK' {
+            InModuleScope NetSecToolkit {
+                $r = Get-WindowsVersionSupport -Caption 'Microsoft Windows 11 Pro' -DisplayVersion '25H2' -Now ([datetime]'2026-11-27')
+                $r.Level | Should -Be 'OK'
+                $r.Text | Should -Match '2027-10-12'
+            }
+        }
+        It 'flags a Home or Pro version that is past its end of servicing' {
+            InModuleScope NetSecToolkit {
+                $r = Get-WindowsVersionSupport -Caption 'Microsoft Windows 11 Home' -DisplayVersion '24H2' -Now ([datetime]'2026-11-27')
+                $r.Level | Should -Be 'Risk'
+                $r.Text | Should -Match 'stopped getting security updates on 2026-10-13'
+                $r.Fix | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'warns in the last 90 days, and not before' {
+            InModuleScope NetSecToolkit {
+                (Get-WindowsVersionSupport -Caption 'Microsoft Windows 11 Pro' -DisplayVersion '24H2' -Now ([datetime]'2026-09-01')).Level | Should -Be 'Warn'
+                (Get-WindowsVersionSupport -Caption 'Microsoft Windows 11 Pro' -DisplayVersion '24H2' -Now ([datetime]'2026-05-01')).Level | Should -Be 'OK'
+            }
+        }
+        It 'does not call an Enterprise or Education edition unsupported on the Home and Pro date' {
+            InModuleScope NetSecToolkit {
+                (Get-WindowsVersionSupport -Caption 'Microsoft Windows 11 Enterprise' -DisplayVersion '24H2' -Now ([datetime]'2026-11-27')).Level | Should -Be 'Info'
+            }
+        }
+        It 'stays quiet for Windows 10 and says so for versions it does not know' {
+            InModuleScope NetSecToolkit {
+                Get-WindowsVersionSupport -Caption 'Microsoft Windows 10 Pro' -DisplayVersion '22H2' | Should -BeNullOrEmpty
+                (Get-WindowsVersionSupport -Caption 'Microsoft Windows 11 Pro' -DisplayVersion '27H2').Level | Should -Be 'Info'
+            }
+        }
+    }
+
     Context 'ConvertFrom-SecurityCenterState' {
         It 'decodes real-time and definition status' {
             InModuleScope NetSecToolkit {

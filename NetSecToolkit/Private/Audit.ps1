@@ -244,6 +244,61 @@ function Get-UpdateAgeRating {
     }
 }
 
+function Format-WindowsBuild {
+    # "Microsoft Windows 11 Pro, version 25H2, build 26200.7171"
+    param([string]$Caption, [string]$DisplayVersion, [string]$Build, $Revision)
+    $text = if ($Caption) { $Caption.Trim() } else { 'Windows' }
+    if ($DisplayVersion) { $text += ", version $DisplayVersion" }
+    if ($Build) {
+        $text += ", build $Build"
+        if ("$Revision" -ne '') { $text += ".$Revision" }
+    }
+    $text
+}
+
+# When each Windows 11 feature update stops getting security updates on Home and
+# Pro editions. Source: Microsoft lifecycle page for Windows 11 Home and Pro
+# (checked 2026-11-27). Enterprise and Education editions are serviced longer.
+$script:Windows11Servicing = @{
+    '21H2' = [datetime]'2023-10-10'
+    '22H2' = [datetime]'2024-10-08'
+    '23H2' = [datetime]'2025-11-11'
+    '24H2' = [datetime]'2026-10-13'
+    '25H2' = [datetime]'2027-10-12'
+    '26H1' = [datetime]'2028-03-14'
+    '26H2' = [datetime]'2028-10-09'
+}
+
+function Get-WindowsVersionSupport {
+    # Whether this Windows 11 feature update still gets security updates.
+    # Returns Level, Text and Fix, or nothing for systems it has no dates for.
+    param([string]$Caption, [string]$DisplayVersion, [datetime]$Now = (Get-Date))
+    if ($Caption -notmatch 'Windows 11' -or -not $DisplayVersion) { return }
+    $version = $DisplayVersion.ToUpper()
+    if (-not $script:Windows11Servicing.ContainsKey($version)) {
+        return [pscustomobject]@{ Level = 'Info'; Fix = ''
+            Text = "Windows 11 version $version is newer than this toolkit's support table, so its end-of-servicing date was not checked." }
+    }
+    $end = $script:Windows11Servicing[$version]
+    $homeOrPro = $Caption -notmatch 'Enterprise|Education|IoT|LTSC'
+    $fix = 'Settings > Windows Update: install the current feature update'
+    if ($Now.Date -gt $end) {
+        if ($homeOrPro) {
+            return [pscustomobject]@{ Level = 'Risk'; Fix = $fix
+                Text = "Windows 11 version $version stopped getting security updates on $($end.ToString('yyyy-MM-dd')) (Home and Pro editions)." }
+        }
+        return [pscustomobject]@{ Level = 'Info'; Fix = ''
+            Text = "Windows 11 version $version ended servicing for Home and Pro on $($end.ToString('yyyy-MM-dd')). This edition is serviced longer; check Microsoft's lifecycle page for its date." }
+    }
+    $daysLeft = [int]($end - $Now.Date).TotalDays
+    if ($homeOrPro -and $daysLeft -le 90) {
+        return [pscustomobject]@{ Level = 'Warn'; Fix = $fix
+            Text = "Windows 11 version $version stops getting security updates in $daysLeft day(s), on $($end.ToString('yyyy-MM-dd')) (Home and Pro editions)." }
+    }
+    [pscustomobject]@{ Level = 'OK'; Fix = ''
+        Text = "Windows 11 version $version gets security updates until $($end.ToString('yyyy-MM-dd')) (Home and Pro editions)." }
+}
+
 function ConvertFrom-SecurityCenterState {
     # Decodes the productState number Security Center reports for an antivirus.
     param([long]$ProductState)
@@ -454,6 +509,23 @@ function Get-LastUpdateDate {
         Write-Verbose "Get-HotFix failed: $($_.Exception.Message)"
     }
     $null
+}
+
+function Get-WindowsBuild {
+    # Edition, feature-update version (25H2), build and revision of this Windows.
+    $key = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+    $os = Get-OsInfo
+    [pscustomobject]@{
+        Caption        = if ($os) { "$($os.Caption)" } else { "$(Get-RegValue -Path $key -Name 'ProductName')" }
+        DisplayVersion = "$(Get-RegValue -Path $key -Name 'DisplayVersion')"
+        Build          = "$(Get-RegValue -Path $key -Name 'CurrentBuild')"
+        Revision       = "$(Get-RegValue -Path $key -Name 'UBR')"
+    }
+}
+
+function Test-RestartPending {
+    # True when installed updates are waiting for a restart to finish.
+    Test-Path -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
 }
 
 function Get-AntivirusStatus {

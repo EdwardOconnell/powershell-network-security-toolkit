@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- `Get-HardeningStatus` now shows the Windows edition, version and build (for example "Windows 11 Pro, version 25H2, build 26200.7171"), checks whether that Windows 11 version still gets security updates, and warns when installed updates are waiting for a restart.
+
 ## 1.2.0
 
 Brings over what the Windows XP edition (NetSecToolkitXP 0.3 to 0.5) added, rebuilt for Windows 10 and 11.

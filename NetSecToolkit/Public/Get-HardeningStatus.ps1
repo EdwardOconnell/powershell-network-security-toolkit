@@ -6,7 +6,8 @@ function Get-HardeningStatus {
         Checks the firewall, Remote Desktop and Remote Assistance, the services
         Set-HardeningBaseline disables, SMBv1, NetBIOS, the Guest account, AutoRun,
         anonymous access, LM hashes, NTLMv2, the password and lockout policy, UAC, DEP,
-        how recently Windows was updated, and which TCP ports are listening on the
+        the Windows version and build and whether it is still serviced, how recently
+        Windows was updated, whether a restart is pending, and which TCP ports are listening on the
         network. Each result is a finding: OK, Info, Warn or Risk, with the fix.
         Changes nothing. Run it elevated to read every setting.
     .PARAMETER PassThru
@@ -175,10 +176,17 @@ function Get-HardeningStatus {
     }
 
     # ---------------------------------------------------------------- updates ----
-    Write-Section 'Windows updates'
+    Write-Section 'Windows version and updates'
+    $build = Get-WindowsBuild
+    Add-Finding $findings Updates Info "$(Format-WindowsBuild -Caption $build.Caption -DisplayVersion $build.DisplayVersion -Build $build.Build -Revision $build.Revision)."
+    $support = Get-WindowsVersionSupport -Caption $build.Caption -DisplayVersion $build.DisplayVersion
+    if ($support) { Add-Finding $findings Updates $support.Level $support.Text $support.Fix }
     $age = Get-UpdateAgeRating -LastUpdate (Get-LastUpdateDate)
     $updateFix = if ($age.Level -in 'Warn', 'Risk') { 'Settings > Windows Update > Check for updates' } else { '' }
     Add-Finding $findings Updates $age.Level $age.Text $updateFix
+    if (Test-RestartPending) {
+        Add-Finding $findings Updates Warn 'Installed updates are waiting for a restart to finish.' 'Restart the PC'
+    }
     if ($os -and "$($os.Caption)" -match 'Windows 10' -and "$($os.Caption)" -notmatch 'LTS[CB]') {
         Add-Finding $findings Updates Info "$($os.Caption) (build $($os.BuildNumber)): free security updates for Windows 10 ended on October 14, 2025. It only stays patched through Extended Security Updates; moving to a supported Windows version is the lasting fix."
     }

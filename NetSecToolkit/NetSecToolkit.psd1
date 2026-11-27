@@ -1,6 +1,6 @@
 @{
     RootModule           = 'NetSecToolkit.psm1'
-    ModuleVersion        = '1.2.0'
+    ModuleVersion        = '1.2.1'
     GUID                 = '79f44595-becd-4a7e-95a1-81426804d1b4'
     Author               = "Edward O'Connell III"
     Copyright            = "(c) 2026 Edward O'Connell III. MIT License."

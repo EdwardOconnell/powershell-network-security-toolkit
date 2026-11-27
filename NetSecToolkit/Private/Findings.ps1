@@ -1,7 +1,7 @@
 # Findings: the shared result format of the audit commands (1.2.0).
 # A finding has Area, Level (OK, Info, Warn, Risk), Message and an optional Fix.
 
-$script:ToolkitVersion = '1.2.0'
+$script:ToolkitVersion = '1.2.1'
 $script:Copyright      = "Copyright Edward O'Connell III 2026"
 $script:HardeningFix   = 'Set-HardeningBaseline'
 
