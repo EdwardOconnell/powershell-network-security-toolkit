@@ -20,7 +20,9 @@ function Get-NetAdapterHealth {
     Assert-Administrator
 
     Write-Section 'Adapter status'
+    $virtual = @{}
     $adapters = @(foreach ($a in Get-NetAdapter) {
+        $virtual[$a.Name] = [bool]($a.Virtual -or "$($a.InterfaceDescription)" -match 'VirtualBox|VMware|Hyper-V|Virtual|TAP-|Loopback')
         $cfg = if ($a.Status -ne 'Not Present') {
             Get-NetIPConfiguration -InterfaceIndex $a.ifIndex -ErrorAction SilentlyContinue
         }
@@ -61,7 +63,28 @@ function Get-NetAdapterHealth {
     }
     $internet | Show-Table
 
+    Write-Section 'Summary'
+    $findings = [System.Collections.Generic.List[object]]::new()
+    foreach ($a in @($adapters | Where-Object Status -eq 'Up')) {
+        if ($a.APIPA -and $virtual[$a.Name]) {
+            # Host-only adapters of VirtualBox, VMware and Hyper-V often have no DHCP server.
+            Add-Finding $findings Network Info "$($a.Name) is a virtual adapter with a self-assigned address ($($a.IPv4)). Normal for a host-only VM network."
+        } elseif ($a.APIPA) {
+            Add-Finding $findings Network Warn "$($a.Name) has no DHCP lease (APIPA address $($a.IPv4))." 'ipconfig /release; ipconfig /renew; check the cable or Wi-Fi and the router''s DHCP server'
+        }
+        if ($a.Gateway -and -not $a.GW_Ping) {
+            Add-Finding $findings Network Warn "$($a.Name): gateway $($a.Gateway) did not answer ping." 'Check the connection to the router; some routers ignore ping'
+        }
+    }
+    foreach ($d in @($drivers | Where-Object { $_.Status -eq 'Error' -and $_.Note -ne 'Disabled' })) {
+        Add-Finding $findings Network Warn "Network adapter driver problem: $($d.FriendlyName) ($($d.Problem))." 'Device Manager > Network adapters: update or reinstall the driver'
+    }
+    if (-not $internet.'DNS resolve') { Add-Finding $findings Network Warn 'DNS lookups are failing.' 'ipconfig /flushdns; check the DNS servers with Get-DnsClientServerAddress' }
+    if (-not $internet.'HTTPS 443')   { Add-Finding $findings Network Warn 'No HTTPS connectivity to the internet.' }
+    if (-not @($findings | Where-Object Level -in 'Risk', 'Warn').Count) { Add-Finding $findings Network OK 'Adapters, gateway, DNS and HTTPS all answered.' }
+    Save-RunFinding -Name 'Get-NetAdapterHealth' -Finding $findings
+
     if ($PassThru) {
-        [pscustomobject]@{ Adapters = $adapters; Drivers = $drivers; PacketErrors = $stats; Internet = $internet }
+        [pscustomobject]@{ Adapters = $adapters; Drivers = $drivers; PacketErrors = $stats; Internet = $internet; Findings = $findings.ToArray() }
     }
 }

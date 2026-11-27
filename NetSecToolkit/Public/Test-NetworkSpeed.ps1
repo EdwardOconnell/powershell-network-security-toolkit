@@ -159,7 +159,7 @@ function Test-NetworkSpeed {
         UpMbps       = $up.Mbps
     }
     New-Item -ItemType Directory -Path (Split-Path $LogPath) -Force | Out-Null
-    $row | Export-Csv -Path $LogPath -Append -NoTypeInformation
+    $row | Export-Csv -Path $LogPath -Append
 
     Write-Section 'Recent results'
     Import-Csv $LogPath | Select-Object -Last 8 |
