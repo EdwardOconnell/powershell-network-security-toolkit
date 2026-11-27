@@ -170,6 +170,24 @@ Describe 'Assistant and findings (1.2.0)' {
         }
     }
 
+    Context 'Scan requests' {
+        It 'recognizes plain-language requests to run a check' {
+            InModuleScope NetSecToolkit {
+                foreach ($q in 'scan', 'rescan', 'check', 'check my settings', 'Check my PC', 'scan this computer',
+                               'please check my security', 'can you scan my pc?', 'run a scan', 'run the check again', 'audit everything.') {
+                    Test-AssistantScanRequest $q | Should -BeTrue
+                }
+            }
+        }
+        It 'leaves questions about one thing alone' {
+            InModuleScope NetSecToolkit {
+                foreach ($q in 'check the firewall log', 'what is netbios', 'how do I check my router', 'scan results', 'plan', 'checkmate', '') {
+                    Test-AssistantScanRequest $q | Should -BeFalse
+                }
+            }
+        }
+    }
+
     Context 'Turns' {
         It 'answers summary, list, explain and questions offline' {
             InModuleScope NetSecToolkit {

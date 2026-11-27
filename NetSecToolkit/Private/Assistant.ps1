@@ -166,7 +166,7 @@ function Get-AssistantExplain {
 function Get-AssistantHelp {
     @(
         'Commands:'
-        '  scan          run Get-HardeningStatus and Get-AccountAudit and load the results'
+        '  scan          run Get-HardeningStatus and Get-AccountAudit and load the results (also: check my settings)'
         '  summary       how this PC is doing'
         '  plan          what to fix first, in order, with the commands'
         '  list          numbered list of the issues found'
@@ -197,6 +197,19 @@ function Get-AssistantOfflineAnswer {
     $related = @($topics | Select-Object -Skip 1 -First 2 | ForEach-Object { $_.Title })
     if ($related.Count) { $ans += "`nRelated: " + ($related -join '; ') }
     $ans
+}
+
+function Test-AssistantScanRequest {
+    # True when the user is asking for a check to be run: "scan", "check my
+    # settings", "scan this pc", "run a check". A question about one thing
+    # ("check the firewall log") is not a scan request.
+    param([string]$Text)
+    $t = "$Text".Trim().ToLower()
+    $polite = '(?:(?:can|could) you |please )*'
+    $tail   = '(?: (?:now|again|please|for me))?\s*[?.!]*$'
+    $target = '(?: (?:my|this|the))?(?: (?:pc|computer|system|machine|laptop|desktop|windows|settings|security|setup|everything))?'
+    ($t -match "^$polite(?:(?:re)?scan|check|audit)$target$tail") -or
+    ($t -match "^${polite}run (?:a |the )?(?:scan|check|audit)$tail")
 }
 
 function Import-LastRunFinding {
@@ -311,7 +324,7 @@ function Invoke-AssistantTurn {
 
     $text = if ($l -match '^(help|\?|commands)$') {
         Get-AssistantHelp
-    } elseif ($l -match '^(scan|rescan)$') {
+    } elseif (Test-AssistantScanRequest $l) {
         Invoke-AssistantScan $State
         Write-Host ''
         Get-AssistantSummary $State

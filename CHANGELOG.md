@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2
+
+- The assistant now runs a scan when asked in plain words ("check my settings", "scan this pc", "run a check"), not only for the `scan` command.
+
 ## 1.2.1
 
 - `Get-HardeningStatus` now shows the Windows edition, version and build (for example "Windows 11 Pro, version 25H2, build 26200.7171"), checks whether that Windows 11 version still gets security updates, and warns when installed updates are waiting for a restart.
